@@ -12,9 +12,9 @@ This roadmap describes planned work, not shipped features. See [COMPATIBILITY.md
 
 ## 0.3 — Build and toolchain improvements
 
-- Universal binary (fat) build orchestration with `lipo` verification in custom SDK bundles.
+- Universal binary (fat) build orchestration with `lipo` verification.
 - Improved incremental build caching and dependency tracking.
-- Cross-backend version and SDK compatibility checks in `doctor`.
+- OSXCross version and SDK compatibility checks in `doctor`.
 - Better handling of custom build phases and shell script phases.
 
 ## 0.4 — Editor and tooling polish
@@ -26,7 +26,7 @@ This roadmap describes planned work, not shipped features. See [COMPATIBILITY.md
 
 ## Later / not committed
 
-- More cross-compilation backends alongside OSXCross and custom SDK bundles.
+- Alternative cross-compilation backends alongside OSXCross.
 - Additional platform targets where an open SDK is available.
 - Stable plugin API for third-party contributions.
 

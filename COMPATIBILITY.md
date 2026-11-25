@@ -17,21 +17,16 @@ The PBX parser is intentionally loss-minimizing: key order, comments, quoting, u
 
 ## Build compatibility
 
-LXcode supports two macOS cross-compilation backends:
-
-- **OSXCross** (primary): discovered from `OSXCROSS_ROOT`, settings, and common install locations. Uses its installed `*-apple-darwin-clang` wrappers and SDK.
-- **Custom SDK bundle**: a generated set of clang/lld wrappers plus a JSON manifest that targets a macOS SDK you supply. Created with `lxcode sdk create`. It is independent of OSXCross and uses the host's clang and lld.
-
-Real macOS builds require a macOS SDK in both cases. LXcode does **not** ship, bundle, or redistribute Apple SDK files and cannot produce macOS binaries without one. No Apple code, assets, or proprietary frameworks are included.
+LXcode uses OSXCross as its primary macOS cross-compilation backend. Real macOS builds require a properly installed OSXCross toolchain with a macOS SDK. LXcode does not ship an SDK and cannot produce macOS binaries without one.
 
 Supported build inputs:
 
 - PBX source, framework, and resource build phases
 - Build settings from project and target configurations, including `.xcconfig` includes
-- `arm64` and `x86_64` outputs (universal binaries require a real installed `lipo`)
-- External CMake-based subprojects via a generated toolchain file for either backend
+- `arm64`, `x86_64`, and universal (`lipo`) outputs
+- External CMake-based subprojects via a generated OSXCross toolchain file
 
-**Limits:** LXcode does not reproduce every Xcode build rule, sandbox behavior, or Apple toolchain feature. Complex custom build scripts may need manual adjustment. The generated bundle's `lipo` is an explicit stub that fails rather than producing a fat binary; supply a real `lipo` for universal builds. Running or testing macOS binaries requires a macOS host or an emulator, neither of which is provided.
+**Limits:** LXcode does not reproduce every Xcode build rule, sandbox behavior, or Apple toolchain feature. Complex custom build scripts may need manual adjustment. Running or testing macOS binaries requires a macOS host or an emulator, neither of which is provided.
 
 ## Editor and tooling
 
