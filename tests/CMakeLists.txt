@@ -1,0 +1,36 @@
+function(lxcode_add_test name)
+  add_executable(${name} ${name}.cpp)
+  target_include_directories(${name} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(${name} PRIVATE ${ARGN})
+  add_test(NAME ${name} COMMAND ${name})
+endfunction()
+
+lxcode_add_test(test_core lxcode_core)
+lxcode_add_test(test_pbxproj lxcode_project)
+lxcode_add_test(test_project lxcode_project)
+lxcode_add_test(test_plists lxcode_project)
+lxcode_add_test(test_toolchains lxcode_toolchains)
+lxcode_add_test(test_build lxcode_build)
+lxcode_add_test(test_git lxcode_sourcecontrol)
+
+add_test(NAME cli_version COMMAND lxcode-cli --version)
+add_test(NAME cli_help COMMAND lxcode-cli --help)
+add_test(NAME cli_toolchains COMMAND lxcode-cli toolchains)
+add_test(NAME cli_doctor
+  COMMAND ${CMAKE_COMMAND}
+    -DCLI=$<TARGET_FILE:lxcode-cli>
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_doctor.cmake)
+
+if(LXCODE_BUILD_GUI)
+  add_test(NAME gui_smoke COMMAND lxcode-gui --smoke-test)
+  set(_lxcode_test_env "QT_QPA_PLATFORM=offscreen")
+  get_target_property(_qt_core_location Qt6::Core IMPORTED_LOCATION_RELEASE)
+  if(NOT _qt_core_location)
+    get_target_property(_qt_core_location Qt6::Core IMPORTED_LOCATION)
+  endif()
+  if(_qt_core_location)
+    get_filename_component(_qt_library_directory "${_qt_core_location}" DIRECTORY)
+    list(APPEND _lxcode_test_env "LD_LIBRARY_PATH=${_qt_library_directory}")
+  endif()
+  set_tests_properties(gui_smoke PROPERTIES ENVIRONMENT "${_lxcode_test_env}")
+endif()

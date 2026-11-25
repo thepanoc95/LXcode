@@ -1,0 +1,27 @@
+# Build directories
+build/
+build-*/
+cmake-build-*/
+out/
+
+# CMake / compiler artifacts
+CMakeCache.txt
+CMakeFiles/
+compile_commands.json
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
+*.o
+*.a
+*.so
+*.d
+*.gcda
+*.gcno
+
+# IDE / editor files
+.vscode/
+.idea/
+*.swp
+
+# Local settings
+settings.local.json

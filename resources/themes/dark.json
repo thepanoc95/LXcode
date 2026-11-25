@@ -1,0 +1,28 @@
+{
+  "name": "LXcode Dark",
+  "appearance": "dark",
+  "window": "#1d1f24",
+  "panel": "#24262d",
+  "panelAlt": "#2b2e36",
+  "border": "#383c47",
+  "text": "#e2e4e9",
+  "muted": "#9aa0ad",
+  "accent": "#4f9dff",
+  "selection": "#3a5f8a",
+  "editor": {
+    "background": "#1e2026",
+    "foreground": "#d8dce5",
+    "lineNumber": "#6d7482",
+    "currentLine": "#262a33",
+    "selection": "#3a5f8a",
+    "keyword": "#c586c0",
+    "type": "#4ec9b0",
+    "function": "#dcdcaa",
+    "string": "#ce9178",
+    "number": "#b5cea8",
+    "comment": "#6a9955",
+    "preprocessor": "#c586c0",
+    "error": "#f14c4c",
+    "warning": "#cca700"
+  }
+}
