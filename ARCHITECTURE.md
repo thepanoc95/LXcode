@@ -8,7 +8,7 @@ LXcode is a set of small C++20 static libraries with a thin CLI and Qt GUI on to
 | --- | --- | --- |
 | `src/core` | `lxcode_core` | Expected, strings, filesystem, process execution, JSON-RPC framing. |
 | `src/project` | `lxcode_project` | OpenStep/PBX AST, XML, plists, xcconfig, workspaces, schemes, high-level `XcodeProject`. |
-| `src/toolchains` | `lxcode_toolchains` | OSXCross discovery, SDK/wrapper detection, compile/link arguments, registry. |
+| `src/toolchains` | `lxcode_toolchains` | OSXCross and custom SDK bundle discovery, SDK/wrapper detection, compile/link arguments, registry. |
 | `src/build` | `lxcode_build` | Build graph, validation, topological ordering, async execution, diagnostics, CMake toolchain generation. |
 | `src/sourcecontrol` | `lxcode_sourcecontrol` | Git commands and typed status/branch/log/diff results. |
 | `src/lsp` | `lxcode_lsp` | Language Server Protocol client over length-framed JSON-RPC. |
@@ -36,7 +36,7 @@ Mutations modify that AST in place, so fields LXcode does not understand survive
 3. `BuildGraph` validates references and computes a topological order.
 4. `BuildController` runs commands asynchronously using `runProcess`, emits events, parses compiler diagnostics, and skips up-to-date outputs based on timestamps.
 
-OSXCross wrappers are selected per architecture. `generateOsxcrossToolchainFile` emits a CMake toolchain file so external CMake-based dependencies can use the same SDK and wrappers.
+Wrappers are selected per architecture. A `Toolchain` carries a `kind` (`OSXCross`, `CustomSdk`, `System`, or `CMake`), resolved tool paths, SDK root, and architectures. `customsdk::createBundle` writes a manifest, README, and generated clang/lld wrappers; `customsdk::detect` reads that manifest back into a `Toolchain`. `generateToolchainFile` emits a CMake toolchain file so external CMake-based dependencies can use the same SDK and wrappers; `generateOsxcrossToolchainFile` is a compatibility alias.
 
 ## GUI flow
 

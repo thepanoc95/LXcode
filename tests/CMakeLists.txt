@@ -10,6 +10,7 @@ lxcode_add_test(test_pbxproj lxcode_project)
 lxcode_add_test(test_project lxcode_project)
 lxcode_add_test(test_plists lxcode_project)
 lxcode_add_test(test_toolchains lxcode_toolchains)
+lxcode_add_test(test_sdk_bundle lxcode_build lxcode_toolchains)
 lxcode_add_test(test_build lxcode_build)
 lxcode_add_test(test_git lxcode_sourcecontrol)
 

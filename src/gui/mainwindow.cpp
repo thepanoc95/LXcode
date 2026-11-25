@@ -53,7 +53,8 @@ MainWindow::MainWindow(QString projectArgument, std::string resourcesDirectory, 
     toolchains_.setSelected(configured);
     if (!toolchains_.selected()) {
         for (const auto& toolchain : toolchains_.toolchains()) {
-            if (toolchain.kind == ToolchainKind::OSXCross && toolchain.valid()) {
+            if ((toolchain.kind == ToolchainKind::OSXCross ||
+                 toolchain.kind == ToolchainKind::CustomSdk) && toolchain.valid()) {
                 toolchains_.setSelected(toolchain.name);
                 break;
             }
@@ -971,7 +972,7 @@ void MainWindow::generateToolchainFile() {
                                                    "osxcross-toolchain.cmake",
                                                    tr("CMake files (*.cmake);;All Files (*)"));
     if (path.isEmpty()) return;
-    auto result = generateOsxcrossToolchainFile(currentToolchain(),
+    auto result = lxcode::generateToolchainFile(currentToolchain(),
                                                 architectureCombo_->currentText().toStdString(),
                                                 path.toStdString());
     if (!result) QMessageBox::critical(this, tr("Toolchain File"),

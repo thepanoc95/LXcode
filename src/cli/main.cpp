@@ -27,6 +27,9 @@ Usage:
   lxcode build <project>       Build a project or workspace
   lxcode clean <project>       Clean build products
   lxcode toolchains            List detected toolchains and SDKs
+  lxcode sdk create <dir>      Create a self-contained clang/lld SDK bundle
+  lxcode sdk list              List detected SDK bundles
+  lxcode sdk doctor [dir]      Validate an SDK bundle
   lxcode doctor [path]         Report IDE/toolchain/project diagnostics
   lxcode info <project>        Print project targets, files and schemes
   lxcode create <dir> <name>   Create a new .xcodeproj in <dir>
@@ -38,6 +41,13 @@ Options for build/clean:
   --architecture <arch>        arm64 (default) or x86_64
   --target <name>              Target name or identifier
   --toolchain <name>           Use a specific configured toolchain
+
+Options for sdk create:
+  --name <name>                Bundle display name
+  --sdk <path>                 Path to a macOS SDK you supply (not bundled)
+  --arch <list>                Comma-separated architectures (default arm64,x86_64)
+  --clang <path>               clang executable (default: discovered on PATH)
+  --clangxx <path>             clang++ executable (default: discovered on PATH)
 )";
 }
 
@@ -232,6 +242,69 @@ int commandToolchains(const std::vector<std::string>& args) {
     return 0;
 }
 
+int commandSdk(const std::string& action, const std::string& argument,
+               const std::vector<std::string>& args) {
+    if (action == "create") {
+        if (argument.empty()) { std::cerr << "usage: lxcode sdk create <dir> [options]\n"; return 1; }
+        customsdk::Manifest manifest;
+        manifest.name = optionValue(args, "--name", std::filesystem::path(argument).filename().string());
+        manifest.compiler = optionValue(args, "--clang", {});
+        manifest.compilerCXX = optionValue(args, "--clangxx", {});
+        manifest.sdkRoot = optionValue(args, "--sdk", {});
+        manifest.architectures = strings::split(optionValue(args, "--arch", "arm64,x86_64"), ',');
+        for (auto& arch : manifest.architectures) arch = strings::trim(arch);
+        manifest.architectures.erase(
+            std::remove_if(manifest.architectures.begin(), manifest.architectures.end(),
+                           [](const std::string& value) { return value.empty(); }),
+            manifest.architectures.end());
+        auto created = customsdk::createBundle(argument, manifest);
+        if (!created) { std::cerr << created.error() << '\n'; return 1; }
+        std::cout << "Created SDK bundle at " << created->string() << '\n';
+        std::cout << "Supply a macOS SDK under SDK/ or set --sdk to your SDK path.\n";
+        return 0;
+    }
+    if (action == "list") {
+        Settings settings;
+        settings.load();
+        ToolchainRegistry registry;
+        for (const auto& root : settings.stringList("toolchainRoots")) registry.addPath(root);
+        registry.detect();
+        bool found = false;
+        for (const auto& toolchain : registry.toolchains()) {
+            if (toolchain.kind != ToolchainKind::CustomSdk) continue;
+            found = true;
+            std::cout << toolchain.name << '\n';
+            std::cout << "  root:    " << toolchain.root.string() << '\n';
+            std::cout << "  SDK:     " << (toolchain.sdk.empty() ? "<none>" : toolchain.sdk.string()) << '\n';
+            std::cout << "  arches:  " << strings::join(toolchain.architectures, ", ") << '\n';
+            std::cout << "  status:  " << (toolchain.valid() ? "ready" : "incomplete") << '\n';
+            for (const auto& error : toolchain.errors) std::cout << "  error:   " << error << '\n';
+            for (const auto& warning : toolchain.warnings) std::cout << "  warning: " << warning << '\n';
+        }
+        if (!found) std::cout << "No SDK bundles detected. Create one with: lxcode sdk create <dir>\n";
+        return 0;
+    }
+    if (action == "doctor") {
+        const auto path = argument.empty() ? std::filesystem::path(".") : std::filesystem::path(argument);
+        auto detected = customsdk::detect(path);
+        if (!detected) { std::cerr << "SDK bundle doctor: " << detected.error() << '\n'; return 1; }
+        std::cout << "SDK bundle: " << detected->name << '\n';
+        std::cout << "  root:    " << detected->root.string() << '\n';
+        std::cout << "  SDK:     " << (detected->sdk.empty() ? "<none>" : detected->sdk.string()) << '\n';
+        for (const auto& arch : detected->architectures) {
+            const auto compiler = toolFor(*detected, arch, "clang++");
+            std::cout << "  " << arch << " compiler: "
+                      << (compiler.empty() ? "<missing>" : compiler.string()) << '\n';
+        }
+        for (const auto& error : detected->errors) std::cout << "  ERROR:   " << error << '\n';
+        for (const auto& warning : detected->warnings) std::cout << "  WARNING: " << warning << '\n';
+        std::cout << (detected->valid() ? "SDK bundle is ready\n" : "SDK bundle is incomplete\n");
+        return detected->valid() ? 0 : 1;
+    }
+    std::cerr << "usage: lxcode sdk <create|list|doctor> [args]\n";
+    return 1;
+}
+
 int commandDoctor(const std::string& argument) {
     std::cout << "LXcode doctor\n";
     int failures = 0;
@@ -288,6 +361,8 @@ int main(int argc, char** argv) {
     if (args[0] == "build" && args.size() > 1) return commandBuild(args[1], false, args);
     if (args[0] == "clean" && args.size() > 1) return commandBuild(args[1], true, args);
     if (args[0] == "toolchains") return commandToolchains(args);
+    if (args[0] == "sdk" && args.size() > 1)
+        return commandSdk(args[1], args.size() > 2 ? args[2] : std::string(), args);
     if (args[0] == "doctor") return commandDoctor(args.size() > 1 ? args[1] : std::string());
     if (args[0] == "create" && args.size() > 2) {
         std::filesystem::path parent(args[1]);
