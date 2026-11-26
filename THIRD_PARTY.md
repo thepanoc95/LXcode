@@ -13,7 +13,7 @@ LXcode includes or depends on the following components. Each retains its own lic
 
 ### Tree-sitter runtime and C grammar
 
-- Used by: editor syntax highlighting.
+- Used by: project metadata parsing helpers and diagnostics. Neovim now owns editor syntax highlighting.
 - License: MIT.
 - Sources: https://github.com/tree-sitter/tree-sitter and https://github.com/tree-sitter/tree-sitter-c
 - Location: `third_party/tree-sitter`
@@ -21,6 +21,7 @@ LXcode includes or depends on the following components. Each retains its own lic
 ## External build/runtime dependencies
 
 - **Qt 6** (Core, Gui, Widgets, Network, Concurrent) — LGPL-3.0 or commercial. https://www.qt.io/
+- **Neovim** — Apache-2.0. Required at runtime by the GUI editor; not bundled. https://neovim.io/
 - **CMake** — BSD-3-Clause. https://cmake.org/
 - **Git** — GPL-2.0. Used as an external command for source control. https://git-scm.com/
 - **OSXCROSS** — MIT. Optional external cross-compilation toolchain; not bundled. https://github.com/tpoechtrager/osxcross

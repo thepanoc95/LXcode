@@ -264,7 +264,7 @@ void MainWindow::applyTheme() {
     const int tabSize = settings_.integer("editorTabSize", 4);
     const bool spaces = settings_.boolean("editorInsertSpaces", true);
     for (int i = 0; i < editorTabs_->count(); ++i) {
-        if (auto* editor = qobject_cast<CodeEditor*>(editorTabs_->widget(i)))
+        if (auto* editor = qobject_cast<NeovimEditor*>(editorTabs_->widget(i)))
             editor->applyTheme(theme_, fontSize, tabSize, spaces);
     }
 }
@@ -533,44 +533,56 @@ void MainWindow::openFile(const std::filesystem::path& path, int line, int colum
     if (path.empty() || !fs::exists(path)) return;
     const auto key = QString::fromStdString(path.lexically_normal().string());
     for (int i = 0; i < editorTabs_->count(); ++i) {
-        auto* editor = qobject_cast<CodeEditor*>(editorTabs_->widget(i));
+        auto* editor = qobject_cast<NeovimEditor*>(editorTabs_->widget(i));
         if (editor && QString::fromStdString(editor->filePath().string()) == key) {
             editorTabs_->setCurrentIndex(i);
             if (line > 0) editor->revealLine(line, column);
             return;
         }
     }
-    auto* editor = new CodeEditor(editorTabs_);
-    editor->setFilePath(path);
-    if (!editor->loadFile()) {
+    auto* editor = new NeovimEditor(editorTabs_);
+    const auto configured = settings_.string("editorNvimPath");
+    const auto executable = configured.empty() ? NeovimEditor::findExecutable()
+                                               : QString::fromStdString(configured);
+    if (executable.isEmpty()) {
         delete editor;
-        QMessageBox::warning(this, tr("Open File"), tr("Cannot read %1").arg(key));
+        QMessageBox::warning(this, tr("Neovim Required"),
+                             tr("Neovim was not found. Install `nvim`, set NVIM, or configure "
+                                "the editor path in Settings."));
         return;
     }
+    QString nvimError;
+    if (!editor->start(executable, &nvimError) || !editor->loadFile()) {
+        delete editor;
+        QMessageBox::warning(this, tr("Open File"),
+                             tr("Cannot open %1 with Neovim: %2").arg(key, nvimError));
+        return;
+    }
+    editor->setFilePath(path);
     editor->applyTheme(theme_, settings_.integer("editorFontSize", 12),
                        settings_.integer("editorTabSize", 4),
                        settings_.boolean("editorInsertSpaces", true));
     const int index = editorTabs_->addTab(editor, QString::fromStdString(path.filename().string()));
     editorTabs_->setTabToolTip(index, key);
     editorTabs_->setCurrentIndex(index);
-    connect(editor, &CodeEditor::modificationChanged, this, &MainWindow::onDocumentModified);
-    connect(editor, &CodeEditor::cursorPositionChanged, this, &MainWindow::onCursorPosition);
-    connect(editor, &CodeEditor::completionRequested, this, &MainWindow::requestCompletion);
-    connect(editor, &CodeEditor::definitionRequested, this, &MainWindow::requestDefinition);
+    connect(editor, &NeovimEditor::modificationChanged, this, &MainWindow::onDocumentModified);
+    connect(editor, &NeovimEditor::cursorPositionChanged, this, &MainWindow::onCursorPosition);
+    connect(editor, &NeovimEditor::completionRequested, this, &MainWindow::requestCompletion);
+    connect(editor, &NeovimEditor::definitionRequested, this, &MainWindow::requestDefinition);
     if (auto client = languageClient(languageIdForPath(path)))
         client->didOpen(path, editor->toPlainText().toStdString());
     if (line > 0) editor->revealLine(line, column);
     updateWindowTitle();
 }
 
-CodeEditor* MainWindow::currentEditor() const {
-    return qobject_cast<CodeEditor*>(editorTabs_->currentWidget());
+NeovimEditor* MainWindow::currentEditor() const {
+    return qobject_cast<NeovimEditor*>(editorTabs_->currentWidget());
 }
 
-CodeEditor* MainWindow::editorForPath(const std::filesystem::path& path) const {
+NeovimEditor* MainWindow::editorForPath(const std::filesystem::path& path) const {
     const auto key = QString::fromStdString(path.lexically_normal().string());
     for (int i = 0; i < editorTabs_->count(); ++i) {
-        auto* editor = qobject_cast<CodeEditor*>(editorTabs_->widget(i));
+        auto* editor = qobject_cast<NeovimEditor*>(editorTabs_->widget(i));
         if (editor && QString::fromStdString(editor->filePath().string()) == key) return editor;
     }
     return nullptr;
@@ -610,7 +622,7 @@ void MainWindow::updateInspector(QTreeWidgetItem* item) {
 }
 
 void MainWindow::onTabCloseRequested(int index) {
-    auto* editor = qobject_cast<CodeEditor*>(editorTabs_->widget(index));
+    auto* editor = qobject_cast<NeovimEditor*>(editorTabs_->widget(index));
     if (!editor) return;
     if (editor->isModified()) {
         const auto answer = QMessageBox::question(
@@ -631,8 +643,8 @@ void MainWindow::onTabChanged(int index) {
     Q_UNUSED(index);
     updateWindowTitle();
     if (auto* editor = currentEditor()) {
-        auto cursor = editor->textCursor();
-        onCursorPosition(cursor.blockNumber() + 1, cursor.columnNumber());
+        const auto cursor = editor->cursorPosition();
+        onCursorPosition(cursor.first, cursor.second);
         startLanguageServer(languageIdForPath(editor->filePath()));
     }
 }
@@ -1014,9 +1026,8 @@ void MainWindow::startDebugSession() {
         return;
     }
     if (auto* editor = currentEditor()) {
-        auto cursor = editor->textCursor();
-        auto breakpoints = debugClient_->setBreakpoints(editor->filePath(),
-                                                        {cursor.blockNumber() + 1});
+        const auto cursor = editor->cursorPosition();
+        auto breakpoints = debugClient_->setBreakpoints(editor->filePath(), {cursor.first});
         if (!breakpoints) emit debugOutput(QString::fromStdString(breakpoints.error()));
     }
     auto launched = debugClient_->launch(std::filesystem::path(program.toStdString()), {},
@@ -1043,7 +1054,7 @@ void MainWindow::showAbout() {
 
 bool MainWindow::promptSaveModified() {
     for (int i = 0; i < editorTabs_->count(); ++i) {
-        auto* editor = qobject_cast<CodeEditor*>(editorTabs_->widget(i));
+        auto* editor = qobject_cast<NeovimEditor*>(editorTabs_->widget(i));
         if (!editor || !editor->isModified()) continue;
         const auto answer = QMessageBox::question(
             this, tr("Unsaved Changes"),
@@ -1064,7 +1075,7 @@ void MainWindow::saveDocument() {
 
 void MainWindow::saveAllDocuments() {
     for (int i = 0; i < editorTabs_->count(); ++i) {
-        if (auto* editor = qobject_cast<CodeEditor*>(editorTabs_->widget(i)))
+        if (auto* editor = qobject_cast<NeovimEditor*>(editorTabs_->widget(i)))
             if (editor->isModified()) editor->saveFile();
     }
     statusLabel_->setText(tr("All documents saved"));

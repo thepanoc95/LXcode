@@ -10,7 +10,8 @@ target_include_directories(lxcode_treesitter PUBLIC
 
 add_library(lxcode_gui STATIC
   mainwindow.cpp
-  codeeditor.cpp
+  nvimeditor.cpp
+  nvimrpc.cpp
   settingsdialog.cpp
   theme.cpp)
 set_target_properties(lxcode_gui PROPERTIES AUTOMOC ON)

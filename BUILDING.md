@@ -6,6 +6,7 @@
 - CMake 3.22+
 - C++20 compiler (GCC 12+ or Clang 15+)
 - Qt 6.2+ with Core, Widgets, Gui, Network, and Concurrent
+- Neovim 0.9+ (`nvim`) — required by the GUI editor; the CLI does not need it
 - nlohmann/json (vendored in `third_party/nlohmann`)
 - Tree-sitter runtime and C grammar (vendored in `third_party/tree-sitter`)
 - Git (for Git integration and commit-based builds of the source tree)
@@ -34,6 +35,23 @@ cmake --install build --prefix /usr/local
 ```
 
 This installs `lxcode`, `lxcode-gui`, and theme resources to `share/lxcode`.
+
+## Neovim
+
+LXcode's GUI does not use a Qt text editor. Each editor tab launches a private headless Neovim process and renders its UI grid in Qt, so Neovim is a runtime requirement for the GUI.
+
+```sh
+# Debian/Ubuntu
+sudo apt install neovim
+# Fedora
+sudo dnf install neovim
+# Arch
+sudo pacman -S neovim
+```
+
+LXcode looks for `nvim` in this order: the `editorNvimPath` setting in Settings, the `NVIM` environment variable, then `PATH`. Override the configuration file with `LXCODE_NVIM_CONFIG=/path/to/init.lua`; otherwise Neovim starts with `--clean` so its behavior is predictable.
+
+LXcode speaks Neovim's msgpack-rpc protocol directly. Editing, syntax, motions, registers, and key handling come from Neovim itself. Qt supplies the tab chrome, completion popup, diagnostics, LSP/DAP wiring, and grid rendering.
 
 ## Non-standard Qt prefix
 

@@ -1,5 +1,5 @@
 #pragma once
-#include "gui/codeeditor.hpp"
+#include "gui/nvimeditor.hpp"
 #include "gui/theme.hpp"
 #include "lxcode/build/buildsystem.hpp"
 #include "lxcode/config/settings.hpp"
@@ -112,8 +112,8 @@ private:
     void addNavigatorItems(QTreeWidgetItem* parent,
                            const std::vector<NavigatorItem>& items);
     void openFile(const std::filesystem::path& path, int line = 0, int column = 0);
-    CodeEditor* currentEditor() const;
-    CodeEditor* editorForPath(const std::filesystem::path& path) const;
+    NeovimEditor* currentEditor() const;
+    NeovimEditor* editorForPath(const std::filesystem::path& path) const;
     void updateInspector(QTreeWidgetItem* item);
     void startLanguageServer(const std::string& languageId);
     std::shared_ptr<LspClient> languageClient(const std::string& languageId);

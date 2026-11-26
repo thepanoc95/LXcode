@@ -20,6 +20,7 @@ public:
     QSpinBox* fontSize = nullptr;
     QSpinBox* tabSize = nullptr;
     QCheckBox* insertSpaces = nullptr;
+    QLineEdit* nvimPath = nullptr;
     QLineEdit* toolchainRoots = nullptr;
     QLineEdit* toolchainName = nullptr;
     QLineEdit* cLanguageServer = nullptr;
@@ -58,6 +59,10 @@ SettingsDialog::SettingsDialog(Settings& settings, const std::string& resourcesD
     ui_->insertSpaces = new QCheckBox(tr("Insert spaces when pressing Tab"), this);
     form->addRow(QString(), ui_->insertSpaces);
 
+    ui_->nvimPath = new QLineEdit(this);
+    ui_->nvimPath->setPlaceholderText(tr("Leave blank to use nvim from PATH or NVIM"));
+    form->addRow(tr("Neovim executable"), ui_->nvimPath);
+
     ui_->toolchainRoots = new QLineEdit(this);
     ui_->toolchainRoots->setPlaceholderText(tr("Colon-separated OSXCross roots"));
     form->addRow(tr("OSXCross roots"), ui_->toolchainRoots);
@@ -83,7 +88,7 @@ SettingsDialog::SettingsDialog(Settings& settings, const std::string& resourcesD
 
     layout->addLayout(form);
     auto* note = new QLabel(
-        tr("Settings are stored in $XDG_CONFIG_HOME/LXcode/settings.json. Language servers and debug adapters are external tools."),
+        tr("Settings are stored in $XDG_CONFIG_HOME/LXcode/settings.json. The editor requires Neovim; language servers and debug adapters are external tools."),
         this);
     note->setWordWrap(true);
     layout->addWidget(note);
@@ -111,6 +116,7 @@ void SettingsDialog::load() {
     ui_->fontSize->setValue(settings_.integer("editorFontSize", 12));
     ui_->tabSize->setValue(settings_.integer("editorTabSize", 4));
     ui_->insertSpaces->setChecked(settings_.boolean("editorInsertSpaces", true));
+    ui_->nvimPath->setText(QString::fromStdString(settings_.string("editorNvimPath")));
 
     QStringList roots;
     for (const auto& root : settings_.stringList("toolchainRoots"))
@@ -145,6 +151,7 @@ void SettingsDialog::accept() {
     settings_.set("editorFontSize", fontSize());
     settings_.set("editorTabSize", tabSize());
     settings_.set("editorInsertSpaces", insertSpaces());
+    settings_.set("editorNvimPath", ui_->nvimPath->text().trimmed().toStdString());
 
     std::vector<std::string> roots;
     for (const auto& item : ui_->toolchainRoots->text().split(':', Qt::SkipEmptyParts))

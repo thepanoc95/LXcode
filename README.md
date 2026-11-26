@@ -11,7 +11,7 @@ Version 0.1.0 is a working first milestone, not a complete clone of Xcode.
 Implemented:
 
 - Qt 6 desktop interface inspired by Xcode's layout: toolbar, project navigator, tabbed editor, inspector, console, settings, light/dark themes.
-- Source editor with Tree-sitter syntax highlighting, line numbers, folding indicators, find/replace, bracket matching, diagnostics underlines, and LSP completion/go-to-definition.
+- Source editor backed by an embedded Neovim instance (headless RPC + rendered UI grid), with LSP completion/go-to-definition and diagnostics. Neovim is a required runtime dependency; see [BUILDING.md](BUILDING.md#neovim).
 - Loss-minimizing OpenStep/`project.pbxproj` parser and serializer. Unknown keys, key order, quoting, and comments are preserved when fields are modified.
 - Xcode project operations: targets, build phases, build settings, file/group add/rename/remove, schemes, workspaces, `Info.plist`, and `.xcconfig`.
 - OSXCross discovery via `OSXCROSS_ROOT`, config files, and common install locations; SDK discovery; architecture-specific wrapper detection; compile/link argument generation; CMake toolchain file generation.
@@ -20,7 +20,7 @@ Implemented:
 - JSON-RPC transport used by external LSP servers and DAP debug adapters.
 - Generator for a Linux SDK bundle that Xcode on macOS can consume: `SDKSettings.plist`, a platform bundle, an xctoolchain with clang/lld wrappers, an `.xcconfig`, and an installer. No Apple SDK is included.
 - Functional CLI: `lxcode`, `open`, `build`, `clean`, `toolchains`, `xcode-sdk`, `doctor`, `info`, `create`.
-- Automated unit tests and an offscreen GUI smoke test.
+- Automated unit tests, an offscreen GUI smoke test, and a regression test that opens a source file in the editor.
 
 Not implemented (see [COMPATIBILITY.md](COMPATIBILITY.md)):
 
@@ -38,7 +38,7 @@ ctest --test-dir build --output-on-failure
 ./build/lxcode /path/to/MyApp.xcodeproj
 ```
 
-If Qt 6 is installed in a non-standard location, see [BUILDING.md](BUILDING.md).
+Qt 6 in a non-standard location and the required Neovim installation are covered in [BUILDING.md](BUILDING.md).
 
 ### Command line
 
