@@ -8,6 +8,7 @@
 #include "lxcode/project/xcodeproject.hpp"
 #include "lxcode/sourcecontrol/git.hpp"
 #include "lxcode/toolchains/toolchain.hpp"
+#include "lxcode/xcodesdk/linuxbundle.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -27,6 +28,7 @@ Usage:
   lxcode build <project>       Build a project or workspace
   lxcode clean <project>       Clean build products
   lxcode toolchains            List detected toolchains and SDKs
+  lxcode xcode-sdk <cmd>       Manage a Linux SDK bundle for Xcode (see below)
   lxcode doctor [path]         Report IDE/toolchain/project diagnostics
   lxcode info <project>        Print project targets, files and schemes
   lxcode create <dir> <name>   Create a new .xcodeproj in <dir>
@@ -38,6 +40,22 @@ Options for build/clean:
   --architecture <arch>        arm64 (default) or x86_64
   --target <name>              Target name or identifier
   --toolchain <name>           Use a specific configured toolchain
+
+xcode-sdk commands (generate a Linux SDK bundle for Xcode on macOS):
+  lxcode xcode-sdk create <dir> [options]
+  lxcode xcode-sdk doctor <dir>
+  lxcode xcode-sdk install <dir> --developer-dir <path> [--dry-run]
+  lxcode xcode-sdk xcconfig <dir> [output]
+
+Options for xcode-sdk create:
+  --name <name>                Bundle display name (default Linux)
+  --id <identifier>            Toolchain identifier
+  --version <string>           SDK version string (default 1.0)
+  --arch <list>                Comma-separated Xcode arches (default x86_64,arm64)
+  --sysroot <path>             Linux sysroot supplied by you; not bundled
+  --clang <path>               Explicit clang path (default: from PATH at build time)
+  --clangxx <path>             Explicit clang++ path
+  --llvm-bin <path>            Directory containing ld.lld, llvm-ar, ...
 )";
 }
 
@@ -232,6 +250,82 @@ int commandToolchains(const std::vector<std::string>& args) {
     return 0;
 }
 
+int commandXcodeSdk(const std::string& action, const std::string& argument,
+                    const std::vector<std::string>& args) {
+    using namespace lxcode::xcodesdk;
+
+    if (action == "create") {
+        if (argument.empty()) {
+            std::cerr << "usage: lxcode xcode-sdk create <dir> [options]\n";
+            return 1;
+        }
+        Manifest manifest;
+        manifest.name = optionValue(args, "--name", "Linux");
+        manifest.identifier = optionValue(args, "--id", "dev.lxcode.sdk.linux");
+        manifest.versionString = optionValue(args, "--version", "1.0");
+        manifest.sysroot = optionValue(args, "--sysroot", {});
+        manifest.clang = optionValue(args, "--clang", {});
+        manifest.clangxx = optionValue(args, "--clangxx", {});
+        manifest.llvmBin = optionValue(args, "--llvm-bin", {});
+        manifest.architectures = strings::split(optionValue(args, "--arch", "x86_64,arm64"), ',');
+        for (auto& architecture : manifest.architectures) architecture = strings::trim(architecture);
+        manifest.architectures.erase(
+            std::remove_if(manifest.architectures.begin(), manifest.architectures.end(),
+                           [](const std::string& value) { return value.empty(); }),
+            manifest.architectures.end());
+
+        auto created = createBundle(argument, manifest);
+        if (!created) { std::cerr << created.error() << '\n'; return 1; }
+        std::cout << "Created Xcode Linux SDK bundle at " << created->string() << '\n';
+        std::cout << "Supply a Linux sysroot, then run: lxcode xcode-sdk doctor " << argument << '\n';
+        return 0;
+    }
+
+    if (action == "doctor") {
+        if (argument.empty()) {
+            std::cerr << "usage: lxcode xcode-sdk doctor <dir>\n";
+            return 1;
+        }
+        const auto result = validate(argument);
+        for (const auto& warning : result.warnings) std::cout << "WARNING " << warning << '\n';
+        for (const auto& error : result.errors) std::cout << "ERROR   " << error << '\n';
+        std::cout << (result.ok() ? "Bundle is structurally valid\n"
+                                  : "Bundle is incomplete\n");
+        std::cout << "Note: Xcode integration cannot be verified on this host.\n";
+        return result.ok() ? 0 : 1;
+    }
+
+    if (action == "install") {
+        if (argument.empty()) {
+            std::cerr << "usage: lxcode xcode-sdk install <dir> --developer-dir <path> [--dry-run]\n";
+            return 1;
+        }
+        const auto developerDir = optionValue(args, "--developer-dir", {});
+        const bool dryRun = hasOption(args, "--dry-run");
+        auto installed = install(argument, developerDir, dryRun);
+        if (!installed) { std::cerr << installed.error() << '\n'; return 1; }
+        for (const auto& path : *installed)
+            std::cout << (dryRun ? "Would install " : "Installed ") << path.string() << '\n';
+        return 0;
+    }
+
+    if (action == "xcconfig") {
+        if (argument.empty()) {
+            std::cerr << "usage: lxcode xcode-sdk xcconfig <dir> [output]\n";
+            return 1;
+        }
+        const auto output = args.size() > 1 ? std::filesystem::path(args[1])
+                                            : std::filesystem::path();
+        auto generated = generateXcconfig(argument, output);
+        if (!generated) { std::cerr << generated.error() << '\n'; return 1; }
+        std::cout << "Wrote " << generated->string() << '\n';
+        return 0;
+    }
+
+    std::cerr << "usage: lxcode xcode-sdk <create|doctor|install|xcconfig> [args]\n";
+    return 1;
+}
+
 int commandDoctor(const std::string& argument) {
     std::cout << "LXcode doctor\n";
     int failures = 0;
@@ -288,6 +382,9 @@ int main(int argc, char** argv) {
     if (args[0] == "build" && args.size() > 1) return commandBuild(args[1], false, args);
     if (args[0] == "clean" && args.size() > 1) return commandBuild(args[1], true, args);
     if (args[0] == "toolchains") return commandToolchains(args);
+    if (args[0] == "xcode-sdk" && args.size() > 1)
+        return commandXcodeSdk(args[1], args.size() > 2 ? args[2] : std::string(),
+                               std::vector<std::string>(args.begin() + 2, args.end()));
     if (args[0] == "doctor") return commandDoctor(args.size() > 1 ? args[1] : std::string());
     if (args[0] == "create" && args.size() > 2) {
         std::filesystem::path parent(args[1]);

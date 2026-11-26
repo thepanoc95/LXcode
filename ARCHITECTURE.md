@@ -9,6 +9,7 @@ LXcode is a set of small C++20 static libraries with a thin CLI and Qt GUI on to
 | `src/core` | `lxcode_core` | Expected, strings, filesystem, process execution, JSON-RPC framing. |
 | `src/project` | `lxcode_project` | OpenStep/PBX AST, XML, plists, xcconfig, workspaces, schemes, high-level `XcodeProject`. |
 | `src/toolchains` | `lxcode_toolchains` | OSXCross discovery, SDK/wrapper detection, compile/link arguments, registry. |
+| `src/xcodesdk` | `lxcode_xcodesdk` | Generates and validates a Linux SDK bundle for Xcode: plists, platform/toolchain wrappers, `.xcconfig`, installer. |
 | `src/build` | `lxcode_build` | Build graph, validation, topological ordering, async execution, diagnostics, CMake toolchain generation. |
 | `src/sourcecontrol` | `lxcode_sourcecontrol` | Git commands and typed status/branch/log/diff results. |
 | `src/lsp` | `lxcode_lsp` | Language Server Protocol client over length-framed JSON-RPC. |
@@ -37,6 +38,8 @@ Mutations modify that AST in place, so fields LXcode does not understand survive
 4. `BuildController` runs commands asynchronously using `runProcess`, emits events, parses compiler diagnostics, and skips up-to-date outputs based on timestamps.
 
 OSXCross wrappers are selected per architecture. `generateOsxcrossToolchainFile` emits a CMake toolchain file so external CMake-based dependencies can use the same SDK and wrappers.
+
+The `src/xcodesdk` module is independent of that flow. It writes an Xcode `SDKSettings.plist`, platform bundle, xctoolchain wrappers, `.xcconfig`, and installer using the project's plist serializer. A user-supplied Linux sysroot is only referenced, never modified. Bundle validation re-parses the generated plists and checks wrapper executability.
 
 ## GUI flow
 

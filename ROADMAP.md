@@ -26,7 +26,8 @@ This roadmap describes planned work, not shipped features. See [COMPATIBILITY.md
 
 ## Later / not committed
 
-- Alternative cross-compilation backends alongside OSXCross.
+- Validate and harden the Xcode Linux SDK bundle inside Xcode on macOS.
+- More cross-compilation backends alongside OSXCross.
 - Additional platform targets where an open SDK is available.
 - Stable plugin API for third-party contributions.
 

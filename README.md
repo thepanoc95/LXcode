@@ -18,7 +18,8 @@ Implemented:
 - Build graph with dependency validation, incremental checks, async execution, diagnostics parsing, clean/build commands, and cancellable builds.
 - Git status, staging, commit, branches, checkout, log, diff, and remote listing.
 - JSON-RPC transport used by external LSP servers and DAP debug adapters.
-- Functional CLI: `lxcode`, `open`, `build`, `clean`, `toolchains`, `doctor`, `info`, `create`.
+- Generator for a Linux SDK bundle that Xcode on macOS can consume: `SDKSettings.plist`, a platform bundle, an xctoolchain with clang/lld wrappers, an `.xcconfig`, and an installer. No Apple SDK is included.
+- Functional CLI: `lxcode`, `open`, `build`, `clean`, `toolchains`, `xcode-sdk`, `doctor`, `info`, `create`.
 - Automated unit tests and an offscreen GUI smoke test.
 
 Not implemented (see [COMPATIBILITY.md](COMPATIBILITY.md)):
@@ -51,6 +52,19 @@ lxcode info MyApp.xcodeproj
 ```
 
 `lxcode build` requires a usable OSXCross toolchain with an installed macOS SDK. A system compiler can be inspected in `lxcode toolchains`, but it cannot produce macOS binaries without an Apple SDK.
+
+### Linux SDK bundle for Xcode
+
+Separately from LXcode's own build backend, LXcode can generate a bundle that **Xcode on macOS** uses to cross-compile for Linux:
+
+```sh
+lxcode xcode-sdk create ~/LinuxBundle --name "Linux" --arch x86_64,arm64 \
+  --sysroot /path/to/linux-sysroot
+lxcode xcode-sdk doctor ~/LinuxBundle
+lxcode xcode-sdk install ~/LinuxBundle --developer-dir "$(xcode-select -p)"
+```
+
+The bundle contains an `SDKSettings.plist`, `Linux.platform`, `Linux.xctoolchain` with per-architecture clang wrappers and LLVM binary-util wrappers, a ready-to-include `Linux.xcconfig`, and an `install.sh`. It contains **no Apple SDK files** — you supply a Linux sysroot and LLVM tools. See [BUILDING.md](BUILDING.md#linux-sdk-bundle-for-xcode).
 
 ## Documentation
 

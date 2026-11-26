@@ -21,6 +21,7 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 
 add_subdirectory(src/core)
 add_subdirectory(src/project)
+add_subdirectory(src/xcodesdk)
 add_subdirectory(src/toolchains)
 add_subdirectory(src/build)
 add_subdirectory(src/sourcecontrol)
@@ -31,7 +32,7 @@ add_subdirectory(src/diagnostics)
 
 add_executable(lxcode-cli src/cli/main.cpp)
 target_link_libraries(lxcode-cli PRIVATE
-  lxcode_core lxcode_project lxcode_toolchains lxcode_build
+  lxcode_core lxcode_project lxcode_xcodesdk lxcode_toolchains lxcode_build
   lxcode_sourcecontrol lxcode_config lxcode_diagnostics)
 set_target_properties(lxcode-cli PROPERTIES OUTPUT_NAME lxcode)
 

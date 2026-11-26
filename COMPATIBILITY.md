@@ -28,6 +28,12 @@ Supported build inputs:
 
 **Limits:** LXcode does not reproduce every Xcode build rule, sandbox behavior, or Apple toolchain feature. Complex custom build scripts may need manual adjustment. Running or testing macOS binaries requires a macOS host or an emulator, neither of which is provided.
 
+### Linux SDK bundle for Xcode
+
+`lxcode xcode-sdk` generates a bundle for Xcode on macOS that cross-compiles ELF binaries for Linux. It contains SDK/plist metadata, wrapper scripts, an `.xcconfig`, and an installer, but **no Apple SDK or Apple code**. A Linux sysroot and LLVM tools are supplied by the user.
+
+**Limits:** Xcode is designed for Apple platforms. The bundle covers compiler/linker invocation and build settings, but Swift, Apple frameworks, code signing, simulators, and running the resulting ELF binaries on macOS are out of scope. The generated files are structurally validated on Linux; integration with Xcode itself has not been verified on a macOS host.
+
 ## Editor and tooling
 
 - Syntax highlighting uses a vendored Tree-sitter runtime with the C grammar. C++, Objective-C, and Objective-C++ reuse the C grammar and therefore have incomplete highlighting.
