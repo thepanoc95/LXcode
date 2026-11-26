@@ -22,6 +22,8 @@ int main(int argc, char** argv) {
     QCommandLineOption smokeOption("smoke-test",
                                    "Show the main window briefly and exit (used by tests)");
     parser.addOption(smokeOption);
+    QCommandLineOption openFileOption("open-file", "Open a source file after startup", "file");
+    parser.addOption(openFileOption);
     parser.process(application);
 
     const auto positional = parser.positionalArguments();
@@ -35,6 +37,9 @@ int main(int argc, char** argv) {
 
     lxcode::gui::MainWindow window(project, resources);
     window.show();
+    if (!parser.value(openFileOption).isEmpty())
+        QMetaObject::invokeMethod(&window, "openFileFromArgument", Qt::QueuedConnection,
+                                  Q_ARG(QString, parser.value(openFileOption)));
     if (parser.isSet(smokeOption))
         QTimer::singleShot(300, &application, &QCoreApplication::quit);
     return application.exec();

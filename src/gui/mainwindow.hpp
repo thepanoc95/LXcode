@@ -79,6 +79,7 @@ private slots:
     void commitChanges();
     void switchBranch();
 
+    void openFileFromArgument(const QString& path);
     void openSettings();
     void applySettings();
     void refreshToolchains();

@@ -525,6 +525,10 @@ void MainWindow::removeNavigatorItem() {
     else if (project_->save()) populateNavigator();
 }
 
+void MainWindow::openFileFromArgument(const QString& path) {
+    if (!path.isEmpty()) openFile(std::filesystem::path(path.toStdString()));
+}
+
 void MainWindow::openFile(const std::filesystem::path& path, int line, int column) {
     if (path.empty() || !fs::exists(path)) return;
     const auto key = QString::fromStdString(path.lexically_normal().string());

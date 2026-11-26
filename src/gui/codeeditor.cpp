@@ -80,6 +80,20 @@ public:
     }
 
     void setTheme(const Theme& theme) { theme_ = theme; }
+    // QSyntaxHighlighter::rehighlight() emits document changes, which in turn
+    // emit textChanged. Calling rehighlight() directly from a textChanged
+    // handler recurses until the stack overflows, so all callers go through
+    // this re-entrancy guard.
+    void refresh() {
+        if (refreshing_) return;
+        refreshing_ = true;
+        rehighlight();
+        refreshing_ = false;
+    }
+    // QSyntaxHighlighter's destructor rehighlights while this derived object
+    // is being torn down, so CodeEditor disables refresh before destruction.
+    void setEnabled(bool value) { enabled_ = value; }
+    bool shouldRefresh() const { return enabled_ && !refreshing_; }
     void setLanguage(const QString& language) {
         const TSLanguage* languagePtr = nullptr;
         if (language == "c" || language == "cpp" || language == "objective-c" ||
@@ -87,7 +101,7 @@ public:
             languagePtr = tree_sitter_c();
         ts_parser_set_language(parser_, languagePtr);
         dirty_ = true;
-        rehighlight();
+        refresh();
     }
     void markDirty() { dirty_ = true; }
 
@@ -153,6 +167,8 @@ private:
     Theme theme_;
     TSParser* parser_ = nullptr;
     TSTree* tree_ = nullptr;
+    bool refreshing_ = false;
+    bool enabled_ = true;
     bool dirty_ = true;
     std::vector<Range> ranges_;
     std::vector<int> offsets_;
@@ -201,8 +217,9 @@ CodeEditor::CodeEditor(QWidget* parent) : QPlainTextEdit(parent) {
         completion_->hide();
     });
     connect(this, &QPlainTextEdit::textChanged, this, [this]() {
+        if (!highlighter_->shouldRefresh()) return;
         highlighter_->markDirty();
-        highlighter_->rehighlight();
+        highlighter_->refresh();
         updateExtraSelections();
     });
     connect(this, &QPlainTextEdit::modificationChanged, this, &CodeEditor::modificationChanged);
@@ -215,7 +232,9 @@ CodeEditor::CodeEditor(QWidget* parent) : QPlainTextEdit(parent) {
     highlightCurrentLineAndBrackets();
 }
 
-CodeEditor::~CodeEditor() = default;
+CodeEditor::~CodeEditor() {
+    if (highlighter_) highlighter_->setEnabled(false);
+}
 
 void CodeEditor::setFilePath(const std::filesystem::path& path) {
     path_ = path;
@@ -232,7 +251,7 @@ bool CodeEditor::loadFile() {
     setPlainText(QString::fromUtf8(file.readAll()));
     document()->setModified(false);
     highlighter_->markDirty();
-    highlighter_->rehighlight();
+    highlighter_->refresh();
     return true;
 }
 
@@ -256,7 +275,7 @@ void CodeEditor::applyTheme(const Theme& theme, int fontSize, int tabSize, bool 
     setFont(font);
     QTextCharFormat plain = theme.format(TokenKind::Plain, fontSize);
     setCurrentCharFormat(plain);
-    highlighter_->rehighlight();
+    highlighter_->refresh();
     updateExtraSelections();
     lineNumberArea_->update();
     viewport()->update();

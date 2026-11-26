@@ -34,4 +34,10 @@ if(LXCODE_BUILD_GUI)
     list(APPEND _lxcode_test_env "LD_LIBRARY_PATH=${_qt_library_directory}")
   endif()
   set_tests_properties(gui_smoke PROPERTIES ENVIRONMENT "${_lxcode_test_env}")
+
+  add_test(NAME gui_open_file
+    COMMAND ${CMAKE_COMMAND}
+      -DGUI=$<TARGET_FILE:lxcode-gui>
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/gui_open_file.cmake)
+  set_tests_properties(gui_open_file PROPERTIES ENVIRONMENT "${_lxcode_test_env}")
 endif()
